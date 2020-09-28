@@ -14,6 +14,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 
+-------v2.61------------------
+-Attempt Hubitat compatibility
+-More reliable high/avg Temp/Humidity calculation
 
 -------v2.6-------------------
 -Duplicate published v2.55
@@ -45,7 +48,7 @@ definition(
     name: "Spruce Scheduler SST",
     namespace: "plaidsystems",
     author: "Plaid Systems",
-    description: "Schedule for Spruce irrigation controller\nSamsung SmartThings App\nV2.6 2020",
+    description: "Schedule for Spruce irrigation controller\nSamsung SmartThings App\nV2.61 2020",
     category: "Green Living",
     iconUrl: "http://www.plaidsystems.com/smartthings/st_spruce_leaf_250f.png",
     iconX2Url: "http://www.plaidsystems.com/smartthings/st_spruce_leaf_250f.png",
@@ -87,50 +90,50 @@ preferences {
     page(name: 'zoneSetPage16')
 }
 
-def startPage(){
+def startPage() {
     dynamicPage(name: 'startPage', title: 'Spruce Smart Irrigation setup', install: true, uninstall: true)
     {
-        section(''){
+        section('') {
             href(name: 'globalPage', title: 'Schedule settings', required: false, page: 'globalPage',
                 image: 'http://www.plaidsystems.com/smartthings/st_settings.png',
                 description: "Schedule: ${enableString()}\nWatering Time: ${startTimeString()}\nDays:${daysString()}\nNotifications:${notifyString()}"
             )
         }
 
-        section(''){
+        section('') {
             href(name: 'weatherPage', title: 'Weather Settings', required: false, page: 'weatherPage',
                 image: 'http://www.plaidsystems.com/smartthings/st_rain_225_r.png',
                 description: "Weather from: ${zipString()}\nRain Delay: ${isRainString()}\nSeasonal Adjust: ${seasonalAdjString()}"
             )
         }
 
-        section(''){
+        section('') {
             href(name: 'zonePage', title: 'Zone summary and setup', required: false, page: 'zonePage',
                 image: 'http://www.plaidsystems.com/smartthings/st_zone16_225.png',
                 description: "${getZoneSummary()}"
             )
         }
 
-        section(''){
+        section('') {
             href(name: 'delayPage', title: 'Valve delays & Pause controls', required: false, page: 'delayPage',
                 image: 'http://www.plaidsystems.com/smartthings/st_timer.png',
                 description: "Valve Delay: ${pumpDelayString()} s\n${waterStoppersString()}\nSchedule Sync: ${syncString()}"
             )
         }
-        
-        section(''){
+
+        section('') {
             href(title: 'Spruce Irrigation Knowledge Base', //page: 'customPage',
-                  description: 'Explore our knowledge base for more information on Spruce and Spruce sensors.  Contact form is ' +
-                             'also available here.',
+                description: 'Explore our knowledge base for more information on Spruce and Spruce sensors.  Contact form is ' +
+                    'also available here.',
                 required: false, style:'embedded',
                 image: 'http://www.plaidsystems.com/smartthings/st_spruce_leaf_250f.png',
                 url: 'http://support.spruceirrigation.com'
             )
         }
-        
-        section(''){
-            href(title: 'Scheduler Version 2.6',
-                  description: "Updated 8-2020"
+
+        section('') {
+            href(title: 'Scheduler Version 2.61',
+                description: "Updated 9-2020"
             )
         }
     }
@@ -139,25 +142,28 @@ def startPage(){
 def globalPage() {
     dynamicPage(name: 'globalPage', title: '') {
         section('Spruce schedule Settings') {
-                label title: 'Schedule Name:', description: 'Name this schedule', required: false
-                input 'switches', 'capability.switch', title: 'Spruce Irrigation Controller:', description: 'Select a Spruce controller', required: true, multiple: false
+            label title: 'Schedule Name:', description: 'Name this schedule', required: false
+            input 'switches', 'capability.switch', title: 'Spruce Irrigation Controller:', description: 'Select a Spruce controller', required: true, multiple: false
         }
 
-        section('Program Scheduling'){
-            input 'enable', 'bool', title: 'Enable watering:', defaultValue: 'true', metadata: [values: ['true', 'false']]
-            input 'enableManual', 'bool', title: 'Enable this schedule for manual start, only 1 schedule should be enabled for manual start at a time!', defaultValue: 'true', metadata: [values: ['true', 'false']]
+        section('Program Scheduling') {
+            if (getIsSTHub) input 'enable', 'bool', title: 'Enable watering:', defaultValue: 'true', metadata: [values: ['true', 'false']]
+            else            input 'enable', 'bool', title: 'Enable watering:', defaultValue: 'true', options: ['true', 'false']
+            if (getIsSTHub) input 'enableManual', 'bool', title: 'Enable this schedule for manual start, only 1 schedule should be enabled for manual start at a time!', defaultValue: 'true', metadata: [values: ['true', 'false']]
+            else            input 'enableManual', 'bool', title: 'Enable this schedule for manual start, only 1 schedule should be enabled for manual start at a time!', defaultValue: 'true', options: ['true', 'false']
             input 'startTime', 'time', title: 'Watering start time', required: true
             paragraph(image: 'http://www.plaidsystems.com/smartthings/st_calander.png',
-                      title: 'Selecting watering days',
-                      'Selecting watering days is optional. Spruce will optimize your watering schedule automatically. ' +
-                      'If your area has water restrictions or you prefer set days, select the days to meet your requirements. ')
-            input (name: 'days', type: 'enum', title: 'Water only on these days...', required: false, multiple: true, metadata: [values: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Even', 'Odd']])
+                title: 'Selecting watering days',
+                    'Selecting watering days is optional. Spruce will optimize your watering schedule automatically. ' +
+                    'If your area has water restrictions or you prefer set days, select the days to meet your requirements. ')
+            if (getIsSTHub) input (name: 'days', type: 'enum', title: 'Water only on these days...', required: false, multiple: true, metadata: [values: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Even', 'Odd']])
+            else            input (name: 'days', type: 'enum', title: 'Water only on these days...', required: false, multiple: true, options: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Even', 'Odd'])
         }
 
         section('Push Notifications') {
-                input(name: 'notify', type: 'enum', title: 'Select what push notifications to receive.', required: false,
-                    multiple: true, metadata: [values: ['Daily', 'Delays', 'Warnings', 'Weather', 'Moisture', 'Events']])
-                input(name: 'logAll', type: 'bool', title: 'Log all notices to Hello Home?', defaultValue: 'false', options: ['true', 'false'])
+            if (getIsSTHub) input(name: 'notify', type: 'enum', title: 'Select what push notifications to receive.', required: false, multiple: true, metadata: [values: ['Daily', 'Delays', 'Warnings', 'Weather', 'Moisture', 'Events']])
+            else            input(name: 'notify', type: 'enum', title: 'Select what push notifications to receive.', required: false, multiple: true, options: ['Daily', 'Delays', 'Warnings', 'Weather', 'Moisture', 'Events'])
+            input(name: 'logAll', type: 'bool', title: 'Log all notices to Hello Home?', defaultValue: 'false', options: ['true', 'false'])
         }
     }
 }
@@ -166,32 +172,34 @@ def weatherPage() {
     dynamicPage(name: 'weatherPage', title: 'Weather settings') {
        section("Location to get weather forecast and conditions:") {
             input(name: 'zipcode', type: 'text', title: "Zipcode default location: ${getDefaultLocation()}", required: false, submitOnChange: true)
-            input 'isRain', 'bool', title: 'Enable Rain check:', metadata: [values: ['true', 'false']]
+            if (getIsSTHub) input 'isRain', 'bool', title: 'Enable Rain check:', metadata: [values: ['true', 'false']]
+            else            input 'isRain', 'bool', title: 'Enable Rain check:', options: ['true', 'false']
             input 'rainDelay', 'decimal', title: 'inches of rain that will delay watering, default: 0.2', required: false
-            input 'isSeason', 'bool', title: 'Enable Seasonal Weather Adjustment:', metadata: [values: ['true', 'false']]
+            if (getIsSTHub) input 'isSeason', 'bool', title: 'Enable Seasonal Weather Adjustment:', metadata: [values: ['true', 'false']]
+            else            input 'isSeason', 'bool', title: 'Enable Seasonal Weather Adjustment:', options: ['true', 'false']
         }
     }
 }
 
 private String getDefaultLocation() {
     String DefaultLocation = "Not set"
-    if(location?.zipCode) DefaultLocation = location.zipCode
+    if (location?.zipCode) DefaultLocation = location.zipCode
     if (!location?.zipCode?.isNumber() && location?.latitude && location?.longitude) DefaultLocation = "${location.latitude.floatValue()},${location.longitude.floatValue()}"
     return DefaultLocation
 }
 
-private String startTimeString(){
+private String startTimeString() {
     if (!startTime) return 'Please set!' else return hhmm(startTime)
 }
 
-private String enableString(){
-    if(enable && enableManual) return 'On & Manual Set'
+private String enableString() {
+    if (enable && enableManual) return 'On & Manual Set'
     else if (enable) return 'On & Manual Off'
     else if (enableManual) return 'Off & Manual Set'
     else return 'Off'
 }
 
-private String waterStoppersString(){
+private String waterStoppersString() {
     String stoppers = 'Contact Sensor'
     if (settings.contacts) {
         if (settings.contacts.size() != 1) stoppers += 's'
@@ -228,93 +236,93 @@ private String waterStoppersString(){
     return stoppers
 }
 
-private String isRainString(){
+private String isRainString() {
     if (settings.isRain && !settings.rainDelay) return '0.2' as String
     if (settings.isRain) return settings.rainDelay as String else return 'Off'
 }
 
-private String seasonalAdjString(){
-    if(settings.isSeason) return 'On' else return 'Off'
+private String seasonalAdjString() {
+    if (settings.isSeason) return 'On' else return 'Off'
 }
 
-private String syncString(){
+private String syncString() {
     if (settings.sync) return "${settings.sync.displayName}" else return 'None'
 }
 
-private String notifyString(){
+private String notifyString() {
     String notifyStr = ''
-    if(settings.notify) {
-          if (settings.notify.contains('Daily'))         notifyStr += ' Daily'
-          //if (settings.notify.contains('Weekly'))     notifyStr += ' Weekly'
-          if (settings.notify.contains('Delays'))     notifyStr += ' Delays'
-          if (settings.notify.contains('Warnings'))     notifyStr += ' Warnings'
-          if (settings.notify.contains('Weather'))     notifyStr += ' Weather'
-          if (settings.notify.contains('Moisture'))     notifyStr += ' Moisture'
-          if (settings.notify.contains('Events'))     notifyStr += ' Events'
-       }
-       if (notifyStr == '')    notifyStr = ' None'
-       if (settings.logAll) notifyStr += '\nSending all Notifications to Hello Home log'
+    if (settings.notify) {
+        if (settings.notify.contains('Daily'))       notifyStr += ' Daily'
+        //if (settings.notify.contains('Weekly'))      notifyStr += ' Weekly'
+        if (settings.notify.contains('Delays'))      notifyStr += ' Delays'
+        if (settings.notify.contains('Warnings'))    notifyStr += ' Warnings'
+        if (settings.notify.contains('Weather'))     notifyStr += ' Weather'
+        if (settings.notify.contains('Moisture'))    notifyStr += ' Moisture'
+        if (settings.notify.contains('Events'))      notifyStr += ' Events'
+    }
+    if (notifyStr == '')    notifyStr = ' None'
+    if (settings.logAll) notifyStr += '\nSending all Notifications to Hello Home log'
 
-       return notifyStr
+    return notifyStr
 }
 
-private String daysString(){
+private String daysString() {
     String daysString = ''
-    if (days){
-        if(days.contains('Even') || days.contains('Odd')) {
+    if (days) {
+        if (days.contains('Even') || days.contains('Odd')) {
             if (days.contains('Even'))         daysString += ' Even'
-              if (days.contains('Odd'))         daysString += ' Odd'
+            if (days.contains('Odd'))          daysString += ' Odd'
         }
         else {
-            if (days.contains('Monday'))     daysString += ' M'
-            if (days.contains('Tuesday'))     daysString += ' Tu'
-            if (days.contains('Wednesday')) daysString += ' W'
+            if (days.contains('Monday'))       daysString += ' M'
+            if (days.contains('Tuesday'))      daysString += ' Tu'
+            if (days.contains('Wednesday'))    daysString += ' W'
             if (days.contains('Thursday'))     daysString += ' Th'
-            if (days.contains('Friday'))     daysString += ' F'
+            if (days.contains('Friday'))       daysString += ' F'
             if (days.contains('Saturday'))     daysString += ' Sa'
-            if (days.contains('Sunday'))     daysString += ' Su'
+            if (days.contains('Sunday'))       daysString += ' Su'
         }
     }
-    if(daysString == '') return ' Any'
+    if (daysString == '') return ' Any'
 
     else return daysString
 }
 
-private String hhmm(time, fmt = 'h:mm a'){
+private String hhmm(time, fmt = 'h:mm a') {
     def t = timeToday(time, location.timeZone)
     def f = new java.text.SimpleDateFormat(fmt)
     f.setTimeZone(location.timeZone ?: timeZone(time))
     return f.format(t)
 }
 
-private String pumpDelayString(){
+private String pumpDelayString() {
 
     if (!pumpDelay) return '0' else return pumpDelay as String
-    
+
 }
 
 def delayPage() {
     dynamicPage(name: 'delayPage', title: 'Additional Options') {
-        section(''){
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_timer.png',
-                      title: 'Pump and Master valve delay',
-                      required: false,
-                      'Setting a delay is optional, default is 0.  If you have a pump that feeds water directly into your valves, ' +
-                      'set this to 0. To fill a tank or build pressure, you may increase the delay.\n\nStart->Pump On->delay->Valve ' +
-                      'On->Valve Off->delay->...'
+            title: 'Pump and Master valve delay',
+            required: false,
+            'Setting a delay is optional, default is 0.  If you have a pump that feeds water directly into your valves, ' +
+                'set this to 0. To fill a tank or build pressure, you may increase the delay.\n\nStart->Pump On->delay->Valve ' +
+                'On->Valve Off->delay->...'
             input name: 'pumpDelay', type: 'number', title: 'Set a delay in seconds?', defaultValue: '0', required: false
         }
 
-        section(''){
+        section('') {
             paragraph(image: 'http://www.plaidsystems.com/smartthings/st_pause.png',
-                      title: 'Pause Control Contacts & Switches',
-                      required: false,
-                      'Selecting contacts or control switches is optional. When a selected contact sensor is opened or switch is ' +
-                      'toggled, water immediately stops and will not resume until all of the contact sensors are closed and all of ' +
-                      'the switches are reset.\n\nCaution: if all contacts or switches are left in the stop state, the dependent ' +
-                      'schedule(s) will never run.')
+                title: 'Pause Control Contacts & Switches',
+                required: false,
+                'Selecting contacts or control switches is optional. When a selected contact sensor is opened or switch is ' +
+                    'toggled, water immediately stops and will not resume until all of the contact sensors are closed and all of ' +
+                    'the switches are reset.\n\nCaution: if all contacts or switches are left in the stop state, the dependent ' +
+                    'schedule(s) will never run.')
             input(name: 'contacts', title: 'Select water delay contact sensors', type: 'capability.contactSensor', multiple: true,
-                required: false, submitOnChange: true)            
+                required: false, submitOnChange: true)
             if (contacts)
                 input(name: 'contactStop', title: 'Stop watering when sensors are...', type: 'enum', required: (settings.contacts != null),
                     options: ['open', 'closed'], defaultValue: 'open')
@@ -324,16 +332,16 @@ def delayPage() {
                 input(name: 'toggleStop', title: 'Stop watering when switches are...', type: 'enum',
                     required: (settings.toggles != null), options: ['on', 'off'], defaultValue: 'off')
             input(name: 'contactDelay', type: 'number', title: 'Restart watering how many seconds after all contacts and switches ' +
-                    'are reset? (minimum 10s)', defaultValue: '10', required: false)
+                'are reset? (minimum 10s)', defaultValue: '10', required: false)
         }
 
-        section(''){
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_spruce_controller_250.png',
-                           title: 'Controller Sync',
-                          required: false,
-                          'For multiple controllers only.  This schedule will wait for the selected controller to finish before ' +
-                          'starting. Do not set with a single controller!'
-                         input name: 'sync', type: 'capability.switch', title: 'Select Master Controller', description: 'Only use this setting with multiple controllers', required: false, multiple: false
+                title: 'Controller Sync',
+                required: false,
+                'For multiple controllers only.  This schedule will wait for the selected controller to finish before ' +
+                    'starting. Do not set with a single controller!'
+                input name: 'sync', type: 'capability.switch', title: 'Select Master Controller', description: 'Only use this setting with multiple controllers', required: false, multiple: false
         }
     }
 }
@@ -342,118 +350,118 @@ def zonePage() {
     dynamicPage(name: 'zonePage', title: 'Zone setup', install: false, uninstall: false) {
         section('') {
             href(name: 'hrefWithImage', title: 'Zone configuration', page: 'zoneSettingsPage',
-             description: "${zoneString()}",
-             required: false,
-             image: 'http://www.plaidsystems.com/smartthings/st_spruce_leaf_250f.png')
+            description: "${zoneString()}",
+            required: false,
+            image: 'http://www.plaidsystems.com/smartthings/st_spruce_leaf_250f.png')
         }
 
-        if (zoneActive('1')){
-        section(''){
+        if (zoneActive('1')) {
+        section('') {
             href(name: 'z1Page', title: "1: ${getname("1")}", required: false, page: 'zoneSetPage1',
                 image: "${getimage("1")}",
                 description: "${display("1")}" )
             }
         }
-        if (zoneActive('2')){
-        section(''){
+        if (zoneActive('2')) {
+        section('') {
             href(name: 'z2Page', title: "2: ${getname("2")}", required: false, page: 'zoneSetPage2',
                 image: "${getimage("2")}",
                 description: "${display("2")}" )
             }
         }
-        if (zoneActive('3')){
-        section(''){
+        if (zoneActive('3')) {
+        section('') {
             href(name: 'z3Page', title: "3: ${getname("3")}", required: false, page: 'zoneSetPage3',
                 image: "${getimage("3")}",
                 description: "${display("3")}" )
             }
         }
-        if (zoneActive('4')){
-        section(''){
+        if (zoneActive('4')) {
+        section('') {
             href(name: 'z4Page', title: "4: ${getname("4")}", required: false, page: 'zoneSetPage4',
                 image: "${getimage("4")}",
                 description: "${display("4")}" )
             }
         }
-        if (zoneActive('5')){
-        section(''){
+        if (zoneActive('5')) {
+        section('') {
             href(name: 'z5Page', title: "5: ${getname("5")}", required: false, page: 'zoneSetPage5',
                 image: "${getimage("5")}",
                 description: "${display("5")}" )
             }
         }
-        if (zoneActive('6')){
-        section(''){
+        if (zoneActive('6')) {
+        section('') {
             href(name: 'z6Page', title: "6: ${getname("6")}", required: false, page: 'zoneSetPage6',
                 image: "${getimage("6")}",
                 description: "${display("6")}" )
             }
         }
-        if (zoneActive('7')){
-        section(''){
+        if (zoneActive('7')) {
+        section('') {
             href(name: 'z7Page', title: "7: ${getname("7")}", required: false, page: 'zoneSetPage7',
                 image: "${getimage("7")}",
                 description: "${display("7")}" )
             }
         }
-        if (zoneActive('8')){
-        section(''){
+        if (zoneActive('8')) {
+        section('') {
             href(name: 'z8Page', title: "8: ${getname("8")}", required: false, page: 'zoneSetPage8',
                 image: "${getimage("8")}",
                 description: "${display("8")}" )
             }
         }
-        if (zoneActive('9')){
-        section(''){
+        if (zoneActive('9')) {
+        section('') {
             href(name: 'z9Page', title: "9: ${getname("9")}", required: false, page: 'zoneSetPage9',
                 image: "${getimage("9")}",
                 description: "${display("9")}" )
             }
         }
-        if (zoneActive('10')){
-        section(''){
+        if (zoneActive('10')) {
+        section('') {
             href(name: 'z10Page', title: "10: ${getname("10")}", required: false, page: 'zoneSetPage10',
                 image: "${getimage("10")}",
                 description: "${display("10")}" )
             }
         }
-        if (zoneActive('11')){
-        section(''){
+        if (zoneActive('11')) {
+        section('') {
             href(name: 'z11Page', title: "11: ${getname("11")}", required: false, page: 'zoneSetPage11',
                 image: "${getimage("11")}",
                 description: "${display("11")}" )
             }
         }
-        if (zoneActive('12')){
-        section(''){
+        if (zoneActive('12')) {
+        section('') {
             href(name: 'z12Page', title: "12: ${getname("12")}", required: false, page: 'zoneSetPage12',
                 image: "${getimage("12")}",
                 description: "${display("12")}" )
             }
         }
-        if (zoneActive('13')){
-        section(''){
+        if (zoneActive('13')) {
+        section('') {
             href(name: 'z13Page', title: "13: ${getname("13")}", required: false, page: 'zoneSetPage13',
                 image: "${getimage("13")}",
                 description: "${display("13")}" )
             }
         }
-        if (zoneActive('14')){
-        section(''){
+        if (zoneActive('14')) {
+        section('') {
             href(name: 'z14Page', title: "14: ${getname("14")}", required: false, page: 'zoneSetPage14',
                 image: "${getimage("14")}",
                 description: "${display("14")}" )
             }
         }
-        if (zoneActive('15')){
-        section(''){
+        if (zoneActive('15')) {
+        section('') {
             href(name: 'z15Page', title: "15: ${getname("15")}", required: false, page: 'zoneSetPage15',
                 image: "${getimage("15")}",
                 description: "${display("15")}" )
             }
         }
-        if (zoneActive('16')){
-        section(''){
+        if (zoneActive('16')) {
+        section('') {
             href(name: 'z16Page', title: "16: ${getname("16")}", required: false, page: 'zoneSetPage16',
                 image: "${getimage("16")}",
                 description: "${display("16")}" )
@@ -463,7 +471,7 @@ def zonePage() {
 }
 
 //code change for ST update file -> change input to zoneNumberEnum
-private boolean zoneActive(z){
+private boolean zoneActive(z) {
     if (!zoneNumberEnum && zoneNumber && zoneNumber >= z.toInteger()) return true
     else if (!zoneNumberEnum && zoneNumber && zoneNumber != z.toInteger()) return false
     else if (zoneNumberEnum && zoneNumberEnum.contains(z)) return true
@@ -481,67 +489,72 @@ private String zoneString() {
 
 def zoneSettingsPage() {
     dynamicPage(name: 'zoneSettingsPage', title: 'Zone Configuration') {
-           section(''){
+        section('') {
             //input (name: "zoneNumber", type: "number", title: "Enter number of zones to configure?",description: "How many valves do you have? 1-16", required: true)//, defaultValue: 16)
-            input 'zoneNumberEnum', 'enum', title: 'Select zones to configure', multiple: true,    metadata: [values: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']]
+            if (getIsSTHub) input 'zoneNumberEnum', 'enum', title: 'Select zones to configure', multiple: true, metadata: [values: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']]
+            else            input 'zoneNumberEnum', 'enum', title: 'Select zones to configure', multiple: true, options: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']
             input 'gain', 'number', title: 'Increase or decrease all water times by this %, enter a negative or positive value, Default: 0', required: false, range: '-99..99'
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_sensor_200_r.png',
-                          title: 'Moisture sensor adapt mode',
-                          'Adaptive mode enabled: Watering times will be adjusted based on the assigned moisture sensor.\n\nAdaptive mode ' +
-                          'disabled (Delay): Zones with moisture sensors will water on any available days when the low moisture setpoint has ' +
-                          'been reached.'
-             input 'learn', 'bool', title: 'Enable Adaptive Moisture Control (with moisture sensors)', metadata: [values: ['true', 'false']]
-           }
+                title: 'Moisture sensor adapt mode',
+                'Adaptive mode enabled: Watering times will be adjusted based on the assigned moisture sensor.\n\nAdaptive mode ' +
+                'disabled (Delay): Zones with moisture sensors will water on any available days when the low moisture setpoint has ' +
+                'been reached.'
+            if (getIsSTHub) input 'learn', 'bool', title: 'Enable Adaptive Moisture Control (with moisture sensors)', metadata: [values: ['true', 'false']]
+            else            input 'learn', 'bool', title: 'Enable Adaptive Moisture Control (with moisture sensors)', options: ['true', 'false']
+        }
     }
 }
 
 def zoneSetPage() {
     dynamicPage(name: 'zoneSetPage', title: "Zone ${state.app} Setup") {
-        section(''){
+        section('') {
             paragraph image: "http://www.plaidsystems.com/smartthings/st_${state.app}.png",
             title: 'Current Settings',
             "${display("${state.app}")}"
             input "name${state.app}", 'text', title: 'Zone name?', required: false, defaultValue: "Zone ${state.app}"
         }
-        
-        section(''){
-             href(name: 'tosprinklerSetPage', title: "Sprinkler type: ${setString('zone')}", required: false, page: 'sprinklerSetPage',
+
+        section('') {
+            href(name: 'tosprinklerSetPage', title: "Sprinkler type: ${setString('zone')}", required: false, page: 'sprinklerSetPage',
                 image: "${getimage("${settings."zone${state.app}"}")}",
                 //description: "Set sprinkler nozzle type or turn zone off")
                 description: 'Sprinkler type descriptions')
-             input "zone${state.app}", 'enum', title: 'Sprinkler Type', multiple: false, required: false, defaultValue: 'Off', submitOnChange: true, metadata: [values: ['Off', 'Spray', 'Rotor', 'Drip', 'Master Valve', 'Pump']]
+            if (getIsSTHub) input "zone${state.app}", 'enum', title: 'Sprinkler Type', multiple: false, required: false, defaultValue: 'Off', submitOnChange: true, metadata: [values: ['Off', 'Spray', 'Rotor', 'Drip', 'Master Valve', 'Pump']]
+            else            input "zone${state.app}", 'enum', title: 'Sprinkler Type', multiple: false, required: false, defaultValue: 'Off', submitOnChange: true, options: ['Off', 'Spray', 'Rotor', 'Drip', 'Master Valve', 'Pump']
          }
-         
-         section(''){
+
+        section('') {
             href(name: 'toplantSetPage', title: "Landscape Select: ${setString('plant')}", required: false, page: 'plantSetPage',
                 image: "${getimage("${settings["plant${state.app}"]}")}",
                 //description: "Set landscape type")
                 description: 'Landscape type descriptions')
-             input "plant${state.app}", 'enum', title: 'Landscape', multiple: false, required: false, submitOnChange: true, metadata: [values: ['Lawn', 'Garden', 'Flowers', 'Shrubs', 'Trees', 'Xeriscape', 'New Plants']]
-            }
+            if (getIsSTHub) input "plant${state.app}", 'enum', title: 'Landscape', multiple: false, required: false, submitOnChange: true, metadata: [values: ['Lawn', 'Garden', 'Flowers', 'Shrubs', 'Trees', 'Xeriscape', 'New Plants']]
+            else            input "plant${state.app}", 'enum', title: 'Landscape', multiple: false, required: false, submitOnChange: true, options: ['Lawn', 'Garden', 'Flowers', 'Shrubs', 'Trees', 'Xeriscape', 'New Plants']
+        }
 
-        section(''){
+        section('') {
             href(name: 'tooptionSetPage', title: "Options: ${setString('option')}", required: false, page: 'optionSetPage',
                 image: "${getimage("${settings["option${state.app}"]}")}",
                 //description: "Set watering options")
                 description: 'Watering option descriptions')
-            input "option${state.app}", 'enum', title: 'Options', multiple: false, required: false, defaultValue: 'Cycle 2x', submitOnChange: true,metadata: [values: ['Slope', 'Sand', 'Clay', 'No Cycle', 'Cycle 2x', 'Cycle 3x']]
-            }
-        
-        section(''){
+            if (getIsSTHub) input "option${state.app}", 'enum', title: 'Options', multiple: false, required: false, defaultValue: 'Cycle 2x', submitOnChange: true, metadata: [values: ['Slope', 'Sand', 'Clay', 'No Cycle', 'Cycle 2x', 'Cycle 3x']]
+            else            input "option${state.app}", 'enum', title: 'Options', multiple: false, required: false, defaultValue: 'Cycle 2x', submitOnChange: true, options: ['Slope', 'Sand', 'Clay', 'No Cycle', 'Cycle 2x', 'Cycle 3x']
+        }
+
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_sensor_200_r.png',
-                      title: 'Moisture sensor settings',
-                      'Select a soil moisture sensor to monitor and control watering.  The soil moisture target value is set to a default value but can be adjusted to tune watering'
+                title: 'Moisture sensor settings',
+                'Select a soil moisture sensor to monitor and control watering.  The soil moisture target value is set to a default value but can be adjusted to tune watering'
             input "sensor${state.app}", 'capability.relativeHumidityMeasurement', title: 'Select moisture sensor?', required: false, multiple: false
             input "sensorSp${state.app}", 'number', title: "Minimum moisture sensor target value, Setpoint: ${getDrySp(state.app)}", required: false
         }
 
-        section(''){
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_timer.png',
-                      title: 'Optional: Enter total watering time per week',
-                      'This value will replace the calculated time from other settings'
-                input "minWeek${state.app}", 'number', title: 'Water time per week.\nDefault: 0 = autoadjust', description: 'minutes per week', required: false
-                input "perDay${state.app}", 'number', title: 'Guideline value for time per day, this divides minutes per week into watering days. Default: 20', defaultValue: '20', required: false
+                title: 'Optional: Enter total watering time per week',
+                'This value will replace the calculated time from other settings'
+            input "minWeek${state.app}", 'number', title: 'Water time per week.\nDefault: 0 = autoadjust', description: 'minutes per week', required: false
+            input "perDay${state.app}", 'number', title: 'Guideline value for time per day, this divides minutes per week into watering days. Default: 20', defaultValue: '20', required: false
         }
     }
 }
@@ -564,13 +577,13 @@ private String setString(String type) {
 
 def plantSetPage() {
     dynamicPage(name: 'plantSetPage', title: "${settings["name${state.app}"]} Landscape Select") {
-        section(''){
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/img/st_${state.app}.png',
                 title: "${settings["name${state.app}"]}",
                 "Current settings ${display("${state.app}")}"
             //input "plant${state.app}", "enum", title: "Landscape", multiple: false, required: false, submitOnChange: true, metadata: [values: ['Lawn', 'Garden', 'Flowers', 'Shrubs', 'Trees', 'Xeriscape', 'New Plants']]
         }
-        section(''){
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_lawn_200_r.png',
             title: 'Lawn',
             'Select Lawn for typical grass applications'
@@ -602,15 +615,15 @@ def plantSetPage() {
     }
 }
 
-def sprinklerSetPage(){
+def sprinklerSetPage() {
     dynamicPage(name: 'sprinklerSetPage', title: "${settings["name${state.app}"]} Sprinkler Select") {
-        section(''){
+        section('') {
             paragraph image: "http://www.plaidsystems.com/img/st_${state.app}.png",
             title: "${settings["name${state.app}"]}",
             "Current settings ${display("${state.app}")}"
             //input "zone${state.app}", "enum", title: "Sprinkler Type", multiple: false, required: false, defaultValue: 'Off', metadata: [values: ['Off', 'Spray', 'Rotor', 'Drip', 'Master Valve', 'Pump']]
             }
-        section(''){
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_spray_225_r.png',
             title: 'Spray',
             'Spray sprinkler heads spray a fan of water over the lawn. The water is applied evenly and can be turned on for a shorter duration of time.'
@@ -634,15 +647,15 @@ def sprinklerSetPage(){
     }
 }
 
-def optionSetPage(){
+def optionSetPage() {
     dynamicPage(name: 'optionSetPage', title: "${settings["name${state.app}"]} Options") {
-        section(''){
+        section('') {
             paragraph image: "http://www.plaidsystems.com/img/st_${state.app}.png",
             title: "${settings["name${state.app}"]}",
             "Current settings ${display("${state.app}")}"
             //input "option${state.app}", "enum", title: "Options", multiple: false, required: false, defaultValue: 'Cycle 2x', metadata: [values: ['Slope', 'Sand', 'Clay', 'No Cycle', 'Cycle 2x', 'Cycle 3x']]
         }
-        section(''){
+        section('') {
             paragraph image: 'http://www.plaidsystems.com/smartthings/st_slope_225_r.png',
             title: 'Slope',
             'Slope sets the sprinklers to cycle 3x, each with a short duration to minimize runoff'
@@ -670,12 +683,12 @@ def optionSetPage(){
     }
 }
 
-def setPage(i){
+def setPage(i) {
     if (i) state.app = i
     return state.app
 }
 
-private String getaZoneSummary(int zone){
+private String getaZoneSummary(int zone) {
     if (!settings."zone${zone}" || (settings."zone${zone}" == 'Off')) return "${zone}: Off"
 
     String daysString = ''
@@ -701,29 +714,29 @@ private String getaZoneSummary(int zone){
     return "${zone}: ${runTime} min, ${daysString}"
 }
 
-private String getZoneSummary(){
-     String summary = ''
+private String getZoneSummary() {
+    String summary = ''
     if (learn) summary = 'Moisture Learning enabled' else summary = 'Moisture Learning disabled'
 
     int zone = 1
     createDPWMap()
-    while(zone <= 16) {
-          if (nozzle(zone) == 4) summary = "${summary}\n${zone}: ${settings."zone${zone}"}"
-          else if ( (initDPW(zone) != 0) && zoneActive(zone.toString())) summary = "${summary}\n${getaZoneSummary(zone)}"
-          zone++
+    while (zone <= 16) {
+        if (nozzle(zone) == 4) summary = "${summary}\n${zone}: ${settings."zone${zone}"}"
+        else if ( (initDPW(zone) != 0) && zoneActive(zone.toString())) summary = "${summary}\n${getaZoneSummary(zone)}"
+        zone++
     }
     if (summary) return summary else return zoneString()    //"Setup all 16 zones"
 }
 
-private String display(String i){
+private String display(String i) {
     //log.trace "display(${i})"
     String displayString = ''
     int tpw = initTPW(i.toInteger())
     int dpw = initDPW(i.toInteger())
     int runTime = calcRunTime(tpw, dpw)
-    if (settings."zone${i}")     displayString += settings."zone${i}" + ' : '
+    if (settings."zone${i}")      displayString += settings."zone${i}" + ' : '
     if (settings."plant${i}")     displayString += settings."plant${i}" + ' : '
-    if (settings."option${i}")     displayString += settings."option${i}" + ' : '
+    if (settings."option${i}")    displayString += settings."option${i}" + ' : '
     int j = i.toInteger()
     if (settings."sensor${i}") {
         displayString += settings."sensor${i}"
@@ -733,16 +746,16 @@ private String display(String i){
     return displayString
 }
 
-private String getimage(String image){
+private String getimage(String image) {
     String imageStr = image
     if (image.isNumber()) {
         String zoneStr = settings."zone${image}"
         if (zoneStr) {
             if (zoneStr == 'Off')             return 'http://www.plaidsystems.com/smartthings/off2.png'
-            if (zoneStr == 'Master Valve')     return 'http://www.plaidsystems.com/smartthings/master.png'
-            if (zoneStr == 'Pump')             return 'http://www.plaidsystems.com/smartthings/pump.png'
+            if (zoneStr == 'Master Valve')    return 'http://www.plaidsystems.com/smartthings/master.png'
+            if (zoneStr == 'Pump')            return 'http://www.plaidsystems.com/smartthings/pump.png'
 
-            if (settings."plant${image}") imageStr = settings."plant${image}"        // default assume asking for the plant image
+            if (settings."plant${image}") imageStr = settings."plant${image}"   // default assume asking for the plant image
         }
     }
     // OK, lookup the requested image
@@ -797,7 +810,7 @@ private String getname(String i) {
     if (settings."name${i}") return settings."name${i}" else return "Zone ${i}"
 }
 
-private String zipString() {    
+private String zipString() {
     if (settings?.zipcode) return settings.zipcode
     if (location?.zipCode?.isNumber()) return "${location.zipCode}"
     if (location?.latitude && location?.longitude) return "${location.latitude.floatValue()},${location.longitude.floatValue()}"
@@ -806,14 +819,15 @@ private String zipString() {
 
 //app install
 def installed() {
-    state.dpwMap =                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    state.tpwMap =                 [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    state.Rain =                 [0,0,0,0,0,0,0]
-    state.daycount =             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    atomicState.run =             false                // must be atomic - used to recover from crashes
-    state.pauseTime =             null
+    getHubPlatform()
+    state.dpwMap =              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    state.tpwMap =              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    state.Rain =                [0,0,0,0,0,0,0]
+    state.daycount =            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    atomicState.run =           false   // must be atomic - used to recover from crashes
+    state.pauseTime =           null
     atomicState.startTime =     null
-    atomicState.finishTime =     null        // must be atomic - used to recover from crashes
+    atomicState.finishTime =    null    // must be atomic - used to recover from crashes
 
     log.debug "Installed with settings: ${settings}"
     installSchedule()
@@ -824,11 +838,11 @@ def updated() {
     installSchedule()
 }
 
-def installSchedule(){
-    if (!state.seasonAdj)             state.seasonAdj = 100.0
-    if (!state.weekseasonAdj)         state.weekseasonAdj = 0
-    if (state.daysAvailable != 0)     state.daysAvailable = 0    // force daysAvailable to be initialized by daysAvailable()
-    state.daysAvailable =             daysAvailable()            // every time we save the schedule
+def installSchedule() {
+    if (!state.seasonAdj)            state.seasonAdj = 100.0
+    if (!state.weekseasonAdj)        state.weekseasonAdj = 0
+    if (state.daysAvailable != 0)    state.daysAvailable = 0    // force daysAvailable to be initialized by daysAvailable()
+    state.daysAvailable =            daysAvailable()            // every time we save the schedule
 
     if (atomicState.run) {
         attemptRecovery()                                     // clean up if we crashed earlier
@@ -843,13 +857,22 @@ def installSchedule(){
 
     // always collect rainfall
     int randomSeconds = rand.nextInt(59)
-    if (settings.isRain || settings.isSeason) schedule("${randomSeconds} 57 23 1/1 * ? *", getRainToday)        // capture today's rainfall just before midnight
+    if (getIsSTHub)
+        if (settings.isRain || settings.isSeason) schedule("${randomSeconds} 57 23 1/1 * ? *", getRainToday)    // capture today's rainfall just before midnight
+    else
+        if (settings.isRain || settings.isSeason) runIn("${randomSeconds} 57 23 1/1 * ? *", getRainToday)       // capture today's rainfall just before midnight
 
-    if (settings.switches && settings.startTime && settings.enable){
+    if (settings.switches && settings.startTime && settings.enable) {
+        def checktime
+        if (getIsSTHub) {
+            randomOffset = rand.nextInt(60000) + 20000
+            checktime = timeToday(settings.startTime, location.timeZone).getTime() + randomOffset
+            //log.debug "randomOffset ${randomOffset} checktime ${checktime}"
+        }
+        else {
+            checktime = settings.startTime
+        }
 
-        randomOffset = rand.nextInt(60000) + 20000
-        def checktime = timeToday(settings.startTime, location.timeZone).getTime() + randomOffset
-        //log.debug "randomOffset ${randomOffset} checktime ${checktime}"
         schedule(checktime, preCheck)    //check weather & Days
         writeSettings()
         note('schedule', "${app.label}: Starts at ${startTimeString()}", 'i')
@@ -1020,12 +1043,12 @@ private String getWaterStopList() {
 }
 
 //write initial zone settings to device at install/update
-def writeSettings(){
-    if (!state.tpwMap)             state.tpwMap = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    if (!state.dpwMap)             state.dpwMap = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    if (state.setMoisture)         state.setMoisture = null                            // not using any more
-    if (!state.seasonAdj)         state.seasonAdj = 100.0
-    if (!state.weekseasonAdj)     state.weekseasonAdj = 0
+def writeSettings() {
+    if (!state.tpwMap)          state.tpwMap = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    if (!state.dpwMap)          state.dpwMap = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    if (state.setMoisture)      state.setMoisture = null    // not using any more
+    if (!state.seasonAdj)       state.seasonAdj = 100.0
+    if (!state.weekseasonAdj)   state.weekseasonAdj = 0
     setSeason()
 }
 
@@ -1034,7 +1057,7 @@ int getWeekDay(day)
 {
     def weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     def mapDay = [Monday:1, Tuesday:2, Wednesday:3, Thursday:4, Friday:5, Saturday:6, Sunday:7]
-    if(day && weekdays.contains(day)) {
+    if (day && weekdays.contains(day)) {
         return mapDay.get(day).toInteger()
     }
     def today = new Date().format('EEEE', location.timeZone)
@@ -1042,8 +1065,16 @@ int getWeekDay(day)
 }
 
 // Get string of run days from dpwMap
-private String getRunDays(day1,day2,day3,day4,day5,day6,day7)
-{
+private String getRunDays(days) {
+    // log.debug "in run days days= $days"
+    def int day1 = days[0]
+    def int day2 = days[1]
+    def int day3 = days[2]
+    def int day4 = days[3]
+    def int day5 = days[4]
+    def int day6 = days[5]
+    def int day7 = days[6]
+
     String str = ''
     if(day1) str += 'M'
     if(day2) str += 'T'
@@ -1053,17 +1084,18 @@ private String getRunDays(day1,day2,day3,day4,day5,day6,day7)
     if(day6) str += 'Sa'
     if(day7) str += 'Su'
     if(str == '') str = '0 Days/week'
+    // log.debug "in get run days result = $str"
     return str
 }
 
 //start manual schedule
-def manualStart(evt){
+def manualStart(evt) {
     boolean running = attemptRecovery()        // clean up if prior run crashed
-	//isWeather()//use for testing
-    if (settings.enableManual && !running && (settings.switches.currentStatus != 'pause')){
+    //isWeather()//use for testing
+    if (settings.enableManual && !running && (settings.switches.currentStatus != 'pause')) {
         if (settings.sync && ( (settings.sync.currentSwitch != 'off') || settings.sync.currentStatus == 'pause') ) {
             note('skipping', "${app.label}: Manual run aborted, ${settings.sync.displayName} appears to be busy", 'a')
-            }
+        }
         else {
             def runNowMap = []
             runNowMap = cycleLoop(0)
@@ -1099,9 +1131,9 @@ def manualStart(evt){
 }
 
 //true if another schedule is running
-boolean busy(){
+boolean busy() {
     // Check if we are already running, crashed or somebody changed the schedule time while this schedule is running
-    if (atomicState.run){
+    if (atomicState.run) {
         if (!attemptRecovery()) {        // recovery will clean out any prior crashes and correct state of atomicState.run
             return false                // (atomicState.run = false)
         }
@@ -1138,7 +1170,7 @@ boolean busy(){
         resetEverything()
         subscribe(settings.switches, 'switch.off', busyOff)
         note('delayed', "${app.label}: Waiting for currently running schedule to complete before starting", 'c')
-           return true
+        return true
     }
 
     // Somthing is running, but we don't need to run today anyway - don't need to do busyOff()
@@ -1147,7 +1179,7 @@ boolean busy(){
     return true
 }
 
-def busyOff(evt){
+def busyOff(evt) {
     def cst = settings.switches.currentStatus
     if ((settings.switches.currentSwitch == 'off') && (cst != 'pause')) { // double check that prior schedule is done
         unsubscribe(switches)                            // we don't want any more button pushes until preCheck runs
@@ -1179,9 +1211,9 @@ def preCheck() {
         def end = now()
         log.debug "preCheck note active ${end - start}ms"
 
-           if (isWeather()) {                            // set adjustments and check if we shold skip because of rain
-               resetEverything()                        // if so, clean up our subscriptions
-               switches.programOff()                    // and release the controller
+        if (isWeather()) {                            // set adjustments and check if we shold skip because of rain
+            resetEverything()                        // if so, clean up our subscriptions
+            switches.programOff()                    // and release the controller
         }
         else {
             log.debug 'preCheck(): running checkRunMap in 2 seconds'    //COOL! We finished before timing out, and we're supposed to water today
@@ -1191,7 +1223,7 @@ def preCheck() {
 }
 
 //start water program
-def cycleOn(){
+def cycleOn() {
     if (atomicState.run) {                            // block if manually stopped during precheck which goes to cycleOff
 
         if (!isWaterStopped()) {                    // make sure ALL the contacts and toggles aren't paused
@@ -1231,7 +1263,7 @@ def cycleOn(){
 }
 
 //when switch reports off, watering program is finished
-def cycleOff(evt){
+def cycleOff(evt) {
 
     if (atomicState.run) {
         def ft = new Date()
@@ -1246,7 +1278,7 @@ def cycleOff(evt){
 }
 
 //run check each day at scheduled time
-def checkRunMap(){
+def checkRunMap() {
 
     //check if isWeather returned true or false before checking
     if (atomicState.run) {
@@ -1310,8 +1342,7 @@ def cycleLoop(int i)
     int totalTime = 0
     if (atomicState.startTime) atomicState.startTime = null                    // haven't started yet
 
-    while(zone <= 16)
-    {
+    while (zone <= 16) {
         rtime = 0
         def setZ = settings."zone${zone}"
         if ((setZ && (setZ != 'Off')) && (nozzle(zone) != 4) && zoneActive(zone.toString())) {
@@ -1326,40 +1357,38 @@ def cycleLoop(int i)
               }
               else {
 
-                  dpw = getDPW(zone)                                    // figure out if we need to run (if we don't already know we do)
-                  if (settings.days && (settings.days.contains('Even') || settings.days.contains('Odd'))) {
+                dpw = getDPW(zone)                                    // figure out if we need to run (if we don't already know we do)
+                if (settings.days && (settings.days.contains('Even') || settings.days.contains('Odd'))) {
                     def daynum = new Date().format('dd', location.timeZone)
                     int dayint = Integer.parseInt(daynum)
                     if (settings.days.contains('Odd') && (((dayint +1) % Math.round(31 / (dpw * 4))) == 0)) runToday = 1
-                      else if (settings.days.contains('Even') && ((dayint % Math.round(31 / (dpw * 4))) == 0)) runToday = 1
-                  }
-                  else {
+                    else if (settings.days.contains('Even') && ((dayint % Math.round(31 / (dpw * 4))) == 0)) runToday = 1
+                }
+                else {
                     int weekDay = getWeekDay()-1
                     def dpwMap = getDPWDays(dpw)
                     runToday = dpwMap[weekDay]  //1 or 0
                     if (isDebug) log.debug "Zone: ${zone} dpw: ${dpw} weekDay: ${weekDay} dpwMap: ${dpwMap} runToday: ${runToday}"
 
-                  }
-              }
+                }
+            }
 
             // OK, we're supposed to run (or at least adjust the sensors)
-              if (runToday == 1)
-              {
+            if (runToday == 1) {
                 def soil
                 if (i == 0) soil = moisture(0)     // manual
                 else soil = moisture(zone)        // moisture check
-                  soilString = "${soilString}${soil[1]}"
+                soilString = "${soilString}${soil[1]}"
 
                 // Run this zone if soil moisture needed
-                if ( soil[0] == 1 )
-                {
+                if ( soil[0] == 1 ) {
                     cyc = cycles(zone)
                     tpw = getTPW(zone)
                     dpw = getDPW(zone)                    // moisture() may have changed DPW
 
                     rtime = calcRunTime(tpw, dpw)
                     //daily weather adjust if no sensor
-                    if(settings.isSeason && (!settings.learn || !settings."sensor${zone}")) {
+                    if (settings.isSeason && (!settings.learn || !settings."sensor${zone}")) {
 
 
                         rtime = Math.round(((rtime / cyc) * (state.seasonAdj / 100.0)) + 0.4)
@@ -1412,16 +1441,15 @@ def cycleLoop(int i)
 }
 
 //send cycle settings
-def writeCycles(){
+def writeCycles() {
     //log.trace "writeCycles()"
     def cyclesMap = [:]
     //add pumpdelay @ 1
     cyclesMap."1" = pumpDelayString()
     int zone = 1
     int cycle = 0
-    while(zone <= 17)
-    {
-        if(nozzle(zone) == 4) cycle = 4
+    while (zone <= 17) {
+        if (nozzle(zone) == 4) cycle = 4
         else cycle = cycles(zone)
         //offset by 1, due to pumpdelay @ 1
         cyclesMap."${zone+1}" = "${cycle}"
@@ -1430,12 +1458,12 @@ def writeCycles(){
     switches.settingsMap(cyclesMap, 4001)
 }
 
-def resume(){
+def resume() {
     log.debug 'resume()'
     settings.switches.zon()
 }
 
-def syncOn(evt){
+def syncOn(evt) {
     // double check that the switch is actually finished and not just paused
     if ((settings.sync.currentSwitch == 'off') && (settings.sync.currentStatus != 'pause')) {
         resetEverything()                                // back to our known state
@@ -1447,7 +1475,7 @@ def syncOn(evt){
 }
 
 // handle start of pause session
-def waterStop(evt){
+def waterStop(evt) {
     log.debug "waterStop: ${evt.displayName}"
 
     unschedule(cycleOn)            // in case we got stopped again before cycleOn starts from the restart
@@ -1503,8 +1531,8 @@ def offPauseCheck( evt ) {
 }
 
 // handle end of pause session
-def waterStart(evt){
-    if (!isWaterStopped()){                     // only if ALL of the selected contacts are not open
+def waterStart(evt) {
+    if (!isWaterStopped()) {                     // only if ALL of the selected contacts are not open
         def cDelay = 10
         if (settings.contactDelay > 10) cDelay = settings.contactDelay
         runIn(cDelay, cycleOn)
@@ -1544,22 +1572,22 @@ def waterStart(evt){
 }
 
 //Initialize Days per week, based on TPW, perDay and daysAvailable settings
-int initDPW(int zone){
+int initDPW(int zone) {
     //log.debug "initDPW(${zone})"
-    if(!state.dpwMap) state.dpwMap = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    if (!state.dpwMap) state.dpwMap = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
     int tpw = getTPW(zone)        // was getTPW -does not update times in scheduler without initTPW
     int dpw = 0
 
-    if(tpw > 0) {
+    if (tpw > 0) {
         float perDay = 20.0
-        if(settings."perDay${zone}") perDay = settings."perDay${zone}".toFloat()
+        if (settings."perDay${zone}") perDay = settings."perDay${zone}".toFloat()
 
         dpw = Math.round(tpw.toFloat() / perDay)
-        if(dpw <= 1) dpw = 1
+        if (dpw <= 1) dpw = 1
         // 3 days per week not allowed for even or odd day selection
-        if(dpw == 3 && days && (days.contains('Even') || days.contains('Odd')) && !(days.contains('Even') && days.contains('Odd')))
-            if((tpw.toFloat() / perDay) < 3.0) dpw = 2 else dpw = 4
+        if (dpw == 3 && days && (days.contains('Even') || days.contains('Odd')) && !(days.contains('Even') && days.contains('Odd')))
+            if ((tpw.toFloat() / perDay) < 3.0) dpw = 2 else dpw = 4
         int daycheck = daysAvailable()                        // initialize & optimize daysAvailable
         if (daycheck < dpw) dpw = daycheck
     }
@@ -1594,7 +1622,7 @@ int initTPW(int zone) {
     // Use learned, previous tpw if it is available
     if ( settings."sensor${zone}" ) {
         seasonAdjust = 100.0             // no weekly seasonAdjust if this zone uses a sensor
-        if(state.tpwMap && settings.learn) tpw = state.tpwMap[zone-1]
+        if (state.tpwMap && settings.learn) tpw = state.tpwMap[zone-1]
     }
 
     // set user-specified minimum time with seasonal adjust
@@ -1652,8 +1680,7 @@ def moisture(int i)
             latestHum = spHum + 0.99            // make sure we don't water, do seasonal adjustments, but not tpw adjustments
     }
 
-    if (!settings.learn)
-    {
+    if (!settings.learn) {
         // in Delay mode, only looks at target moisture level, doesn't try to adjust tpw
         // (Temporary) seasonal adjustment WILL be applied in cycleLoop(), as if we didn't have a sensor
         if (latestHum <= spHum.toFloat()) {
@@ -1689,9 +1716,9 @@ def moisture(int i)
     int tpwAdjust = 0
 
     if (diffHum > 0.01) {                                 // only adjust tpw if more than 1% of target SP
-          tpwAdjust = Math.round(((tpw * diffHum) + 0.5) * dpw * cpd)    // Compute adjustment as a function of the current tpw
+        tpwAdjust = Math.round(((tpw * diffHum) + 0.5) * dpw * cpd)    // Compute adjustment as a function of the current tpw
         float adjFactor = 2.0 / daysA                    // Limit adjustments to 200% per week - spread over available days
-          if (tpwAdjust > (tpw * adjFactor)) tpwAdjust = Math.round((tpw * adjFactor) + 0.5)         // limit fast rise
+        if (tpwAdjust > (tpw * adjFactor)) tpwAdjust = Math.round((tpw * adjFactor) + 0.5)         // limit fast rise
         if (tpwAdjust < minimum) tpwAdjust = minimum    // but we need to move at least 1 minute per cycle per day to actually increase the watering time
     } else if (diffHum < -0.01) {
         if (diffHum < -0.05) diffHum = -0.05            // try not to over-compensate for a heavy rainstorm...
@@ -1712,7 +1739,7 @@ def moisture(int i)
                 seasonAdjust = Math.round(((sadj / 100.0) * tpw) - 0.5)
         }
     }
-     if (isDebug) log.debug "moisture(${i}): diffHum: ${diffHum}, tpwAdjust: ${tpwAdjust} seasonAdjust: ${seasonAdjust}"
+    if (isDebug) log.debug "moisture(${i}): diffHum: ${diffHum}, tpwAdjust: ${tpwAdjust} seasonAdjust: ${seasonAdjust}"
 
      // Now, adjust the tpw.
      // With seasonal adjustments enabled, tpw can go up or down independent of the difference in the sensor vs SP
@@ -1722,18 +1749,18 @@ def moisture(int i)
     def perD = settings."perDay${i}"
     if (perD) perDay = perD.toInteger()
     if (perDay == 0) perDay = daysA * cpd                // at least 1 minute per cycle per available day
-      if (newTPW < perDay) newTPW = perDay                // make sure we have always have enough for 1 day of minimum water
+    if (newTPW < perDay) newTPW = perDay                // make sure we have always have enough for 1 day of minimum water
 
     int adjusted = 0
     if ((tpwAdjust + seasonAdjust) > 0) {                            // needs more water
-           int maxTPW = daysA * 120    // arbitrary maximum of 2 hours per available watering day per week
-           if (newTPW > maxTPW) newTPW = maxTPW    // initDPW() below may spread this across more days
-           if (newTPW > (maxTPW * 0.75)) note('warning', "${app.label}: Please check ${settings["sensor${i}"]}, ${settings."name${i}"} time per week seems high: ${newTPW} mins/week",'a')
-         if (state.tpwMap[i-1] != newTPW) {    // are we changing the tpw?
+        int maxTPW = daysA * 120    // arbitrary maximum of 2 hours per available watering day per week
+        if (newTPW > maxTPW) newTPW = maxTPW    // initDPW() below may spread this across more days
+        if (newTPW > (maxTPW * 0.75)) note('warning', "${app.label}: Please check ${settings["sensor${i}"]}, ${settings."name${i}"} time per week seems high: ${newTPW} mins/week",'a')
+        if (state.tpwMap[i-1] != newTPW) {    // are we changing the tpw?
             state.tpwMap[i-1] = newTPW
             dpw = initDPW(i)                            // need to recalculate days per week since tpw changed - initDPW() stores the value into dpwMap
             adjusted = newTPW - tpw     // so that the adjustment note is accurate
-         }
+        }
     }
     else if ((tpwAdjust + seasonAdjust) < 0) {                         // Needs less water
         // Find the minimum tpw
@@ -1773,7 +1800,7 @@ def moisture(int i)
 }
 
 //get moisture SP
-int getDrySp(int i){
+int getDrySp(int i) {
     if (settings."sensorSp${i}") return settings."sensorSp${i}".toInteger() // configured SP
 
 
@@ -1798,7 +1825,7 @@ def note(String statStr, String msg, String msgType) {
 
     // notify user second (small cost)
     boolean notifyController = true
-    if(settings.notify || settings.logAll) {
+    if (settings.notify || settings.logAll) {
         String spruceMsg = "Spruce ${msg}"
         switch(msgType) {
             case 'd':
@@ -1872,16 +1899,21 @@ def note(String statStr, String msg, String msgType) {
 }
 
 def sendIt(String msg) {
-    if (location.contactBookEnabled && settings.recipients) {
-        sendNotificationToContacts(msg, settings.recipients, [event: true])
+    if (getIsSTHub) {
+      if (location.contactBookEnabled && settings.recipients) {
+          sendNotificationToContacts(msg, settings.recipients, [event: true])
+      }
+      else {
+          sendPush( msg )
+      }
     }
     else {
-        sendPush( msg )
+      sendPushMessage.deviceNotification(msg)
     }
 }
 
 //days available
-int daysAvailable(){
+int daysAvailable() {
 
     // Calculate days available for watering and save in state variable for future use
     def daysA = state.daysAvailable
@@ -1897,16 +1929,16 @@ int daysAvailable(){
     int dayCount = 0                                    // settings.days specified, need to calculate state.davsAvailable (once)
     if (settings.days.contains('Even') || settings.days.contains('Odd')) {
         dayCount = 4
-        if(settings.days.contains('Even') && settings.days.contains('Odd')) dayCount = 7
+        if (settings.days.contains('Even') && settings.days.contains('Odd')) dayCount = 7
     }
     else {
-        if (settings.days.contains('Monday'))         dayCount += 1
-        if (settings.days.contains('Tuesday'))         dayCount += 1
+        if (settings.days.contains('Monday'))       dayCount += 1
+        if (settings.days.contains('Tuesday'))      dayCount += 1
         if (settings.days.contains('Wednesday'))    dayCount += 1
         if (settings.days.contains('Thursday'))     dayCount += 1
-        if (settings.days.contains('Friday'))         dayCount += 1
+        if (settings.days.contains('Friday'))       dayCount += 1
         if (settings.days.contains('Saturday'))     dayCount += 1
-        if (settings.days.contains('Sunday'))         dayCount += 1
+        if (settings.days.contains('Sunday'))       dayCount += 1
     }
 
     state.daysAvailable = dayCount
@@ -1914,7 +1946,7 @@ int daysAvailable(){
 }
 
 //zone: ['Off', 'Spray', 'rotor', 'Drip', 'Master Valve', 'Pump']
-int nozzle(int i){
+int nozzle(int i) {
     String getT = settings."zone${i}"
     if (!getT) return 0
 
@@ -1935,9 +1967,9 @@ int nozzle(int i){
 }
 
 //plant: ['Lawn', 'Garden', 'Flowers', 'Shrubs', 'Trees', 'Xeriscape', 'New Plants']
-int plant(int i){
+int plant(int i) {
     String getP = settings."plant${i}"
-    if(!getP) return 0
+    if (!getP) return 0
 
     switch(getP) {
         case 'Lawn':
@@ -1960,9 +1992,9 @@ int plant(int i){
 }
 
 //option: ['Slope', 'Sand', 'Clay', 'No Cycle', 'Cycle 2x', 'Cycle 3x']
-int cycles(int i){
+int cycles(int i) {
     String getC = settings."option${i}"
-    if(!getC) return 2
+    if (!getC) return 2
 
     switch(getC) {
         case 'Slope':
@@ -2004,7 +2036,7 @@ def setSeason() {
     if (isDebug) log.debug 'setSeason()'
 
     int zone = 1
-    while(zone <= 16) {
+    while (zone <= 16) {
         if ( !settings.learn || !settings."sensor${zone}" || state.tpwMap[zone-1] == 0) {
 
             int tpw = initTPW(zone)        // now updates state.tpwMap
@@ -2020,48 +2052,48 @@ def setSeason() {
 }
 
 //TWC functions
-def getCity(){
-	String wzipcode = zipString()
+def getCity() {
+    String wzipcode = zipString()
     String city
     try {
-			city = getTwcLocation(wzipcode)?.location?.city ?: wzipcode
-		}
-	catch (e) {
-			log.debug "getTwcLocation exception: $e"
-			// There was a problem obtaining the weather with this zip-code, so fall back to the hub's location and note this for future runs.
-			city = "unknown city"
-		}
-    
+            city = getTwcLocation(wzipcode)?.location?.city ?: wzipcode
+        }
+    catch (e) {
+            log.debug "getTwcLocation exception: $e"
+            // There was a problem obtaining the weather with this zip-code, so fall back to the hub's location and note this for future runs.
+            city = "unknown city"
+        }
+
     return city
 }
 
-def getConditions(){
-	String wzipcode = zipString()
+def getConditions() {
+    String wzipcode = zipString()
     def conditionsData
     try {
-			conditionsData = getTwcConditions(wzipcode)
-		}
-	catch (e) {
-			log.debug "getTwcLocation exception: $e"
-			// There was a problem obtaining the weather with this zip-code, so fall back to the hub's location and note this for future runs.
-			return null
-		}
-    
+            conditionsData = getTwcConditions(wzipcode)
+        }
+    catch (e) {
+            log.debug "getTwcLocation exception: $e"
+            // There was a problem obtaining the weather with this zip-code, so fall back to the hub's location and note this for future runs.
+            return null
+        }
+
     return conditionsData
 }
 
-def getForecast(){
-	String wzipcode = zipString()
+def getForecast() {
+    String wzipcode = zipString()
     def forecastData
     try {
-			forecastData = getTwcForecast(wzipcode)
-		}
-	catch (e) {
-			log.debug "getTwcLocation exception: $e"
-			// There was a problem obtaining the weather with this zip-code, so fall back to the hub's location and note this for future runs.
-			return null
-		}    
-    
+            forecastData = getTwcForecast(wzipcode)
+        }
+    catch (e) {
+            log.debug "getTwcLocation exception: $e"
+            // There was a problem obtaining the weather with this zip-code, so fall back to the hub's location and note this for future runs.
+            return null
+        }
+
     return forecastData
 }
 
@@ -2072,7 +2104,8 @@ def getRainToday() {
     def conditionsData = getConditions()
     if (!conditionsData) {
         note('warning', "${app.label}: Please check Zipcode/PWS setting, error: null", 'a')
-    } else {
+    }
+    else {
         float TRain = 0.0
         if (conditionsData.precip24Hour.isNumber()) {
             TRain = conditionsData.precip24Hour.toFloat()
@@ -2087,26 +2120,26 @@ def getRainToday() {
 }
 
 //check weather, set seasonal adjustment factors, skip today if rainy
-boolean isWeather(){
+boolean isWeather() {
     if (!settings.isRain && !settings.isSeason) return false
-    
+
     def city = getCity()
     def forecastData = getForecast() ?: null
     def conditionsData = getConditions() ?: null
     //log.debug forecastData
     //log.debug conditionsData
-    
+
     //if data is null, skip weather adjustments
     if (!forecastData || !conditionsData) {
         note('warning', "${app.label}: Please check Zipcode/PWS setting, error: null", 'a')
         return false
     }
-        
-   	//check if day or night
+
+       //check if day or night
     int not_today = 0
-   	if (forecastData.daypart[0].daypartName[0] != "Today") not_today = 1;
-    
-   	// OK, we have good data, let's start the analysis
+       if (forecastData.daypart[0].daypartName[0] != "Today") not_today = 1;
+
+       // OK, we have good data, let's start the analysis
     float qpfTodayIn = 0.0
     float qpfTomIn = 0.0
     float popToday = 50.0
@@ -2123,13 +2156,11 @@ boolean isWeather(){
             log.debug 'isWeather(): Unable to get weather forecast.'
             return false
         }
-        
-        //log.debug "${forecastData.daypart[0].qpf}"
-        //log.debug "${forecastData.daypart[0].precipChance}"
-        if (forecastData.daypart[0].qpf[not_today]) qpfTodayIn = forecastData.daypart[0].qpf[not_today].toFloat()
-        if (forecastData.daypart[0].precipChance[not_today]) popToday = forecastData.daypart[0].precipChance[not_today].toFloat()
-        if (forecastData.daypart[0].qpf[2]) qpfTomIn = forecastData.daypart[0].qpf[1].toFloat()
-        if (forecastData.daypart[0].precipChance[2]) popTom = forecastData.daypart[0].precipChance[1].toFloat()
+        qpfTodayIn = forecastData.qpf[0].toFloat()
+        popToday = [forecastData.daypart[0].precipChance[0], forecastData.daypart[0].precipChance[1]].max().toFloat()
+        qpfTomIn = forecastData.qpf[1].toFloat()
+        popTom = [forecastData.daypart[0].precipChance[2], forecastData.daypart[0].precipChance[3]].max().toFloat()
+
         if (qpfTodayIn > 25.0) qpfTodayIn = 25.0
         else if (qpfTodayIn < 0.0) qpfTodayIn = 0.0
         if (qpfTomIn > 25.0) qpfTomIn = 25.0
@@ -2158,7 +2189,7 @@ boolean isWeather(){
         log.debug "TRain ${TRain} qpfTodayIn ${qpfTodayIn} @ ${popToday}%, YRain ${YRain}"
 
         int i = 0
-        while (i <= 6){                                // calculate (un)weighted average (only heavy rainstorms matter)
+        while (i <= 6) {                                // calculate (un)weighted average (only heavy rainstorms matter)
             int factor = 0
             if ((day - i) > 0) factor = day - i else factor =  day + 7 - i
             float getrain = state.Rain[i]
@@ -2170,12 +2201,12 @@ boolean isWeather(){
     }
 
     log.debug 'isWeather(): build report'
-	//log.debug "${forecastData.daypart[0].temperature[not_today]}"
+    //log.debug "${forecastData.daypart[0].temperature[not_today]}"
     //get highs
        int highToday = 0
        int highTom = 0
-       if (forecastData.daypart[0].temperature[not_today]) highToday = forecastData.daypart[0].temperature[not_today].toInteger()
-       if (forecastData.daypart[0].temperature[2]) highTom = forecastData.daypart[0].temperature[2].toInteger()
+       highToday = [forecastData.daypart[0].temperature[0], forecastData.daypart[0].temperature[1]].max().toInteger()
+       highTom = [forecastData.daypart[0].temperature[2], forecastData.daypart[0].temperature[3]].max().toInteger()
 
     String weatherString = "${app.label}: ${city} weather:\n TDA: ${highToday}F"
     if (settings.isRain) weatherString = "${weatherString}, ${qpfTodayIn}in rain (${Math.round(popToday)}% PoP)"
@@ -2197,42 +2228,39 @@ boolean isWeather(){
         float avgHigh = highToday.toFloat()
         if (highToday != 0) {
             // is the temp going up or down for the next few days?
-            int totalHigh = highToday
-            int j = 2
-            int highs = 1            
-            while (j < 6) { // get forecasted high for next 3 days
-                if (forecastData.daypart[0].temperature[j].isNumber()) {
-                    totalHigh += forecastData.daypart[0].temperature[j].toInteger()
-                    highs++
-                }
-                j+=2
+            def highs = [highToday.toInteger()]
+            int j = 1
+            while (j < 4) {    // get forecasted high for next 3 days
+                highs.add([forecastData.daypart[0].temperature[j * 2], forecastData.daypart[0].temperature[j * 2 + 1]].max().toInteger())
+                j++
             }
-            if ( highs > 0 ) avgHigh = (totalHigh / highs)
+            if (highs.size()) avgHigh = highs.sum() / highs.size()
             heatAdjust = (avgHigh / highToday).round(2)
         }
         log.debug "highToday ${highToday}, avgHigh ${avgHigh}, heatAdjust ${heatAdjust}"
-        
+
         //get humidity
         int humToday = 0
-        int avehumidity = 0
-        log.debug "${forecastData.daypart[0].relativeHumidity[not_today]}"
-        if (forecastData.daypart[0].relativeHumidity[not_today]) humToday = forecastData.daypart[0].relativeHumidity[not_today]
-        
+        def humidity = []
+        // Get the humidity for today                                            
+        // Data can be null if daypart has already passed (ie scheduler runs at night)
+        if (forecastData.daypart[0].relativeHumidity[0])
+            humidity.add(forecastData.daypart[0].relativeHumidity[0])
+        if (forecastData.daypart[0].relativeHumidity[1])
+            humidity.add(forecastData.daypart[0].relativeHumidity[1])
+        if (humidity.size()) humToday = (humidity.sum() / humidity.size()).toInteger()
         float humAdjust = 100.0
         float avgHum = humToday.toFloat()
-        
-        if (humToday != 0 && avehumidity != 0) {
-            int j = 2
-            int highs = 1
-            int totalHum = humToday
-            while (j < 6) {                     // get forcasted humitidty for today and the next 3 days                
-                if (forecastData.daypart[0].relativeHumidity[j].isNumber()) {
-                    totalHum += forecastData.daypart[0].relativeHumidity[j]
-                    highs++
-                }
-                j+=2
+        if (humToday != 0) {
+            int j = 1
+            while (j < 4) {     // add the forcasted humidity for next 3 days
+                if (forecastData.daypart[0].relativeHumidity[j * 2])
+                    humidity.add(forecastData.daypart[0].relativeHumidity[j * 2])
+                if (forecastData.daypart[0].relativeHumidity[j * 2 + 1])
+                    humidity.add(forecastData.daypart[0].relativeHumidity[j * 2 + 1])
+                j++
             }
-            if (highs > 1) avgHum = totalHum / highs
+            if (humidity.size()) avgHum = (humidity.sum() / humidity.size()).toInteger()
             humAdjust = 1.5 - ((0.5 * avgHum) / humToday)    // basically, half of the delta % between today and today+3 days
         }
         log.debug "humToday ${humToday}, avgHum ${avgHum}, humAdjust ${humAdjust}"
@@ -2245,9 +2273,9 @@ boolean isWeather(){
         //
         //Note: these should never get to be very large, and work best if allowed to cumulate over time (watering amount will change marginally
         //        as days get warmer/cooler and drier/wetter)
-           def sa = ((heatAdjust + humAdjust) / 2)// * 100.0
-           state.seasonAdj = sa
-           sa = sa - 100.0
+        def sa = ((heatAdjust + humAdjust) / 2)// * 100.0
+        state.seasonAdj = sa
+        sa = sa - 100.0
         String plus = ''
         if (sa > 0) plus = '+'
         weatherString = "${weatherString}\n Adjusting ${plus}${Math.round(sa)}% for weather forecast"
@@ -2255,22 +2283,22 @@ boolean isWeather(){
         // Apply seasonal adjustment on Monday each week or at install
         if ((getWeekDay() == 1) || (state.weekseasonAdj == 0)) {
             //get daylight
-             if (conditionsData.sunriseTimeLocal && conditionsData.sunsetTimeLocal) {
-                 def hours = new java.text.SimpleDateFormat("HH");
-                 def minutes = new java.text.SimpleDateFormat("mm");
-                 String nowAsISO = hours.format(new Date());
+            if (conditionsData.sunriseTimeLocal && conditionsData.sunsetTimeLocal) {
+                def hours = new java.text.SimpleDateFormat("HH");
+                def minutes = new java.text.SimpleDateFormat("mm");
+                String nowAsISO = hours.format(new Date());
 
-				def sunriseTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss-SSSS", conditionsData.sunriseTimeLocal)
+                def sunriseTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss-SSSS", conditionsData.sunriseTimeLocal)
                 def sunsetTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss-SSSS", conditionsData.sunsetTimeLocal)
-                
-                int getsunRH = hours.format(sunriseTime).toInteger()                
+
+                int getsunRH = hours.format(sunriseTime).toInteger()
                 int getsunRM = minutes.format(sunriseTime).toInteger()
                 int getsunSH = hours.format(sunsetTime).toInteger()
                 int getsunSM = minutes.format(sunsetTime).toInteger()
 
                 int daylight = ((getsunSH * 60) + getsunSM)-((getsunRH * 60) + getsunRM)
                 if (daylight >= 850) daylight = 850
-                
+
                 //set seasonal adjustment
                 //seasonal q (fudge) factor
                 float qFact = 75.0
@@ -2306,23 +2334,23 @@ boolean isWeather(){
 
     // if we have no sensors, rain causes us to skip watering for the day
     if (!anySensors()) {
-        if (settings.switches.latestValue('rainsensor') == 'rainsensoron'){
+        if (settings.switches.latestValue('rainsensor') == 'rainsensoron') {
             note('raintoday', "${app.label}: skipping, rain sensor is on", 'd')
             return true
            }
            float popRain = qpfTodayIn * (popToday / 100.0)
-        if (popRain > setrainDelay){
+        if (popRain > setrainDelay) {
             String rainStr = String.format('%.2f', popRain)
             note('raintoday', "${app.label}: skipping, ${rainStr}in of rain is probable today", 'd')
             return true
         }
         popRain += qpfTomIn * (popTom / 100.0)
-        if (popRain > setrainDelay){
+        if (popRain > setrainDelay) {
             String rainStr = String.format('%.2f', popRain)
             note('raintom', "${app.label}: skipping, ${rainStr}in of rain is probable today + tomorrow", 'd')
             return true
         }
-        if (weeklyRain > setrainDelay){
+        if (weeklyRain > setrainDelay) {
             String rainStr = String.format('%.2f', weeklyRain)
             note('rainy', "${app.label}: skipping, ${rainStr}in weighted average rain over the past week", 'd')
             return true
@@ -2331,13 +2359,13 @@ boolean isWeather(){
     else { // we have at least one sensor in the schedule
         // Ignore rain sensor & historical rain - only skip if more than setrainDelay is expected before midnight tomorrow
         float popRain = (qpfTodayIn * (popToday / 100.0)) - TRain    // ignore rain that has already fallen so far today - sensors should already reflect that
-        if (popRain > setrainDelay){
+        if (popRain > setrainDelay) {
             String rainStr = String.format('%.2f', popRain)
             note('raintoday', "${app.label}: skipping, at least ${rainStr}in of rain is probable later today", 'd')
             return true
         }
         popRain += qpfTomIn * (popTom / 100.0)
-        if (popRain > setrainDelay){
+        if (popRain > setrainDelay) {
             String rainStr = String.format('%.2f', popRain)
             note('raintom', "${app.label}: skipping, at least ${rainStr}in of rain is probable later today + tomorrow", 'd')
             return true
@@ -2358,11 +2386,11 @@ private boolean anySensors() {
     return false
 }
 
-def getDPWDays(int dpw){
-    if (dpw && (dpw.isNumber()) && (dpw >= 1) && (dpw <= 7)) {
+def getDPWDays(int dpw) {
+    if (dpw && (dpw >= 1) && (dpw <= 7))
         return state."DPWDays${dpw}"
-    } else
-          return [0,0,0,0,0,0,0]
+    else
+        return [0,0,0,0,0,0,0]
 }
 
 // Create a map of what days each possible DPW value will run on
@@ -2388,44 +2416,44 @@ def createDPWMap() {
     // def int[] daysAvailable = [0,1,2,3,4,5,6]
     def int[] daysAvailable = [0,0,0,0,0,0,0]
 
-    if(settings.days) {
-          if (settings.days.contains('Even') || settings.days.contains('Odd')) {
-              return
-          }
-          if (settings.days.contains('Monday')) {
+    if (settings.days) {
+        if (settings.days.contains('Even') || settings.days.contains('Odd')) {
+            return
+        }
+        if (settings.days.contains('Monday')) {
             daysAvailable[i] = 0
             i++
-          }
+        }
         if (settings.days.contains('Tuesday')) {
             daysAvailable[i] = 1
             i++
-          }
-          if (settings.days.contains('Wednesday')) {
+        }
+        if (settings.days.contains('Wednesday')) {
             daysAvailable[i] = 2
             i++
-          }
-          if (settings.days.contains('Thursday')) {
+        }
+        if (settings.days.contains('Thursday')) {
             daysAvailable[i] = 3
             i++
-          }
-          if (settings.days.contains('Friday')) {
+        }
+        if (settings.days.contains('Friday')) {
             daysAvailable[i] = 4
             i++
-          }
-          if (settings.days.contains('Saturday')) {
+        }
+        if (settings.days.contains('Saturday')) {
             daysAvailable[i] = 5
             i++
-          }
-          if (settings.days.contains('Sunday')) {
+        }
+        if (settings.days.contains('Sunday')) {
             daysAvailable[i] = 6
             i++
-          }
-          if(i != ndaysAvailable) {
+        }
+        if (i != ndaysAvailable) {
             log.debug 'ERROR: days and daysAvailable do not match in setup - overriding'
             log.debug "${i} ${ndaysAvailable}"
             ndaysAvailable = i                // override incorrect setup execution
             state.daysAvailable = i
-          }
+        }
     }
     else {                    // all days are available if settings.days == ""
         daysAvailable = [0,1,2,3,4,5,6]
@@ -2437,104 +2465,104 @@ def createDPWMap() {
     def int[][] runDays = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
 
     for(def a=0; a < ndaysAvailable; a++) {
-          // Figure out next day using the dayDistance map, getting the farthest away day (max value)
-          if(a > 0 && ndaysAvailable >= 2 && a != ndaysAvailable-1) {
-            if(a == 1) {
-                  for(def c=1; c < ndaysAvailable; c++) {
+        // Figure out next day using the dayDistance map, getting the farthest away day (max value)
+        if (a > 0 && ndaysAvailable >= 2 && a != ndaysAvailable-1) {
+            if (a == 1) {
+                for(def c=1; c < ndaysAvailable; c++) {
                     def d = dayDistance[daysAvailable[0]][daysAvailable[c]]
-                      if(d > max) {
+                    if (d > max) {
                           max = d
                           maxday = daysAvailable[c]
                     }
-                  }
-                  //log.debug "max: ${max}  maxday: ${maxday}"
-                  dDays[0] = maxday
+                }
+                //log.debug "max: ${max}  maxday: ${maxday}"
+                dDays[0] = maxday
             }
 
             // Find successive maxes for the following days
-            if(a > 1) {
-                  def lmax = max
-                  def lmaxday = maxday
-                  max = -1
-                  for(int c = 1; c < ndaysAvailable; c++) {
+            if (a > 1) {
+                def lmax = max
+                def lmaxday = maxday
+                max = -1
+                for(int c = 1; c < ndaysAvailable; c++) {
                     def d = dayDistance[daysAvailable[0]][daysAvailable[c]]
                     def t = d > max
                     if (a % 2 == 0)    t = d >= max
-                    if(d < lmax && d >= max) {
-                         if(d == max) {
-                              d = dayDistance[lmaxday][daysAvailable[c]]
-                            if(d > dayDistance[lmaxday][maxday]) {
-                                  max = d
-                                  maxday = daysAvailable[c]
+                    if (d < lmax && d >= max) {
+                        if (d == max) {
+                            d = dayDistance[lmaxday][daysAvailable[c]]
+                            if (d > dayDistance[lmaxday][maxday]) {
+                                max = d
+                                maxday = daysAvailable[c]
                             }
-                          }
-                          else {
+                        }
+                        else {
                             max = d
                             maxday = daysAvailable[c]
-                          }
+                        }
                     }
-                  }
-                  lmax = 5
-                  while(max == -1) {
+                }
+                lmax = 5
+                while (max == -1) {
                     lmax = lmax -1
                     for(int c = 1; c < ndaysAvailable; c++) {
-                          def d = dayDistance[daysAvailable[0]][daysAvailable[c]]
-                          if(d < lmax && d >= max) {
-                            if(d == max) {
-                                    d = dayDistance[lmaxday][daysAvailable[c]]
-                                  if(d > dayDistance[lmaxday][maxday]) {
+                        def d = dayDistance[daysAvailable[0]][daysAvailable[c]]
+                        if (d < lmax && d >= max) {
+                            if (d == max) {
+                                d = dayDistance[lmaxday][daysAvailable[c]]
+                                if (d > dayDistance[lmaxday][maxday]) {
                                     max = d
                                     maxday = daysAvailable[c]
-                                  }
+                                }
                             }
                             else {
-                                  max = d
-                                  maxday = daysAvailable[c]
+                                max = d
+                                maxday = daysAvailable[c]
                             }
-                          }
+                        }
                     }
-                    for (def d=0; d< a-2; d++) {
-                          if(maxday == dDays[d]) max = -1
-                      }
-                  }
-                  //log.debug "max: ${max} maxday: ${maxday}"
-                  dDays[a-1] = maxday
+                    for (def d=0; d < a-2; d++) {
+                        if (maxday == dDays[d]) max = -1
+                    }
+                }
+                //log.debug "max: ${max} maxday: ${maxday}"
+                dDays[a-1] = maxday
             }
-          }
+        }
 
-          // Set the runDays map using the calculated maxdays
-          for(int b=0; b < 7; b++) {
+        // Set the runDays map using the calculated maxdays
+        for(int b=0; b < 7; b++) {
             // Runs every day available
-            if(a == ndaysAvailable-1) {
-                  runDays[a][b] = 0
-                  for (def c=0; c < ndaysAvailable; c++) {
-                    if(b == daysAvailable[c]) runDays[a][b] = 1
-                  }
+            if (a == ndaysAvailable-1) {
+                runDays[a][b] = 0
+                for (def c=0; c < ndaysAvailable; c++) {
+                    if (b == daysAvailable[c]) runDays[a][b] = 1
+                }
             }
             else {
-                  // runs weekly, use first available day
-                  if(a == 0) {
-                    if(b == daysAvailable[0])
-                          runDays[a][b] = 1
+                // runs weekly, use first available day
+                if (a == 0) {
+                    if (b == daysAvailable[0])
+                        runDays[a][b] = 1
                     else
-                          runDays[a][b] = 0
-                  }
-                  else {
+                        runDays[a][b] = 0
+                }
+                else {
                     // Otherwise, start with first available day
-                    if(b == daysAvailable[0])
-                          runDays[a][b] = 1
+                    if (b == daysAvailable[0])
+                        runDays[a][b] = 1
                     else {
-                          runDays[a][b] = 0
-                          for(def c=0; c < a; c++)
-                          if(b == dDays[c])
-                            runDays[a][b] = 1
+                        runDays[a][b] = 0
+                        for(def c=0; c < a; c++)
+                            if (b == dDays[c])
+                                runDays[a][b] = 1
                     }
-                  }
+                }
             }
-          }
+        }
     }
 
-      //log.debug "DPW: ${runDays}"
+    //log.debug "DPW: ${runDays}"
     state.DPWDays1 = runDays[0]
     state.DPWDays2 = runDays[1]
     state.DPWDays3 = runDays[2]
@@ -2545,67 +2573,98 @@ def createDPWMap() {
 }
 
 //transition page to populate app state - this is a fix for WP param
-def zoneSetPage1(){
+def zoneSetPage1() {
     state.app = 1
     zoneSetPage()
-    }
-def zoneSetPage2(){
+}
+def zoneSetPage2() {
     state.app = 2
     zoneSetPage()
-    }
-def zoneSetPage3(){
+}
+def zoneSetPage3() {
     state.app = 3
     zoneSetPage()
-    }
-def zoneSetPage4(){
+}
+def zoneSetPage4() {
     state.app = 4
     zoneSetPage()
-    }
-def zoneSetPage5(){
+}
+def zoneSetPage5() {
     state.app = 5
     zoneSetPage()
-    }
-def zoneSetPage6(){
+}
+def zoneSetPage6() {
     state.app = 6
     zoneSetPage()
-    }
-def zoneSetPage7(){
+}
+def zoneSetPage7() {
     state.app = 7
     zoneSetPage()
-    }
-def zoneSetPage8(){
+}
+def zoneSetPage8() {
     state.app = 8
     zoneSetPage()
-    }
-def zoneSetPage9(i){
+}
+def zoneSetPage9(i) {
     state.app = 9
     zoneSetPage()
-    }
-def zoneSetPage10(){
+}
+def zoneSetPage10() {
     state.app = 10
     zoneSetPage()
-    }
-def zoneSetPage11(){
+}
+def zoneSetPage11() {
     state.app = 11
     zoneSetPage()
-    }
-def zoneSetPage12(){
+}
+def zoneSetPage12() {
     state.app = 12
     zoneSetPage()
-    }
-def zoneSetPage13(){
+}
+def zoneSetPage13() {
     state.app = 13
     zoneSetPage()
-    }
-def zoneSetPage14(){
+}
+def zoneSetPage14() {
     state.app = 14
     zoneSetPage()
-    }
-def zoneSetPage15(){
+}
+def zoneSetPage15() {
     state.app = 15
     zoneSetPage()
-    }
-def zoneSetPage16(){
+}
+def zoneSetPage16() {
     state.app = 16
     zoneSetPage()
+}
+
+// **************************************************************************************************************************
+// SmartThings/Hubitat Portability Library (SHPL)
+// Copyright (c) 2019, Barry A. Burke (storageanarchy@gmail.com)
+//
+// The following 3 calls are safe to use anywhere within a Device Handler or Application
+//  - these can be called (e.g., if (getPlatform() == 'SmartThings'), or referenced (i.e., if (platform == 'Hubitat') )
+//  - performance of the non-native platform is horrendous, so it is best to use these only in the metadata{} section of a
+//    Device Handler or Application
+//
+private String  getPlatform() { (physicalgraph?.device?.HubAction ? 'SmartThings' : 'Hubitat') }    // if (platform == 'SmartThings') ...
+private Boolean getIsST()     { (physicalgraph?.device?.HubAction ? true : false) }                 // if (isST) ...
+private Boolean getIsHE()     { (hubitat?.device?.HubAction ? true : false) }                       // if (isHE) ...
+//
+// The following 3 calls are ONLY for use within the Device Handler or Application runtime
+//  - they will throw an error at compile time if used within metadata, usually complaining that "state" is not defined
+//  - getHubPlatform() ***MUST*** be called from the installed() method, then use "state.hubPlatform" elsewhere
+//  - "if (state.isST)" is more efficient than "if (isSTHub)"
+//
+private String getHubPlatform() {
+    if (state?.hubPlatform == null) {
+        state.hubPlatform = getPlatform()                        // if (hubPlatform == 'Hubitat') ... or if (state.hubPlatform == 'SmartThings')...
+        state.isST = state.hubPlatform.startsWith('S')           // if (state.isST) ...
+        state.isHE = state.hubPlatform.startsWith('H')           // if (state.isHE) ...
     }
+    return state.hubPlatform
+}
+private Boolean getIsSTHub() { (state.isST) }                    // if (isSTHub) ...
+private Boolean getIsHEHub() { (state.isHE) }                    // if (isHEHub) ...
+//
+// **************************************************************************************************************************
