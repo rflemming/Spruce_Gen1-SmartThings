@@ -60,7 +60,7 @@ metadata {
         command "updated"
 
         //new release
-        if (getIsST) {
+        if (isST) {
             fingerprint endpointId: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18", profileId: "0104", deviceId: "0002", deviceVersion: "00", inClusters: "0000,0003,0004,0005,0006,000F", outClusters: "0003, 0019", manufacturer: "PLAID SYSTEMS", model: "PS-SPRZ16-01", deviceJoinName: "Spruce Controller"
             fingerprint endpointId: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18", profileId: "0104", deviceId: "0002", deviceVersion: "00", inClusters: "0000,0003,0004,0005,0006,0009,000A,000F", outClusters: "0003, 0019", manufacturer: "PLAID SYSTEMS", model: "PS-SPRZ16-01", deviceJoinName: "Spruce Controller"
             fingerprint endpointId: "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18", profileId: "0104", deviceId: "0002", deviceVersion: "00", inClusters: "0000,0003,0004,0005,0006,0009,000A,000F", outClusters: "0003, 0006, 0019", manufacturer: "PLAID SYSTEMS", model: "PS-SPRWIFI16-01", deviceJoinName: "Spruce Controller WiFi"
@@ -99,7 +99,7 @@ metadata {
         input name: "z15", type: "bool", title: "Enable Zone 15", displayDuringSetup: true
         input name: "z16", type: "bool", title: "Enable Zone 16", displayDuringSetup: true
     }
-    if (getIsST) {
+    if (isST) {
         tiles(scale: 2) {
             standardTile("switch", "device.switch", width: 2, height: 2) {
                 state "off", label: "off", action: "on"
@@ -220,7 +220,7 @@ private void createChildDevices() {
     if (!childDevices.find{it.deviceNetworkId == "${device.deviceNetworkId}:19"}) {
         log.debug "Add Refresh"
         def child
-        if (getIsSTHub) {
+        if (isSTHub) {
             child = addChildDevice("Spruce zone", "${device.deviceNetworkId}:19", device.hubId,
                 [completedSetup: true, label: "Refresh",
                 isComponent: true, componentName: "Refresh", componentLabel: "Refresh"])
@@ -243,7 +243,7 @@ private void createChildDevices() {
             if (!child) {
                 def childLabel = (state.oldLabel != null ? "${state.oldLabel} Zone${i}" : "Spruce Zone${i}")
                 if (settings.pumpMasterZone == i) childLabel = "Spruce PM Zone${i}"
-                if (getIsSTHub) {
+                if (isSTHub) {
                     child = addChildDevice("Spruce zone", "${device.deviceNetworkId}:${dni}", device.hubId,
                             [completedSetup: true, label: "${childLabel}",
                              isComponent: false])//, componentName: "Zone${i}", componentLabel: "${device.displayName} ${i}"])
@@ -421,7 +421,7 @@ def commandType(endpoint, cluster) {
 
 def zoneOn(endpoint, duration) {
     log.debug "zoneOn: ${endpoint} ${duration}"
-    if (getIsSTHub) {
+    if (isSTHub) {
         return zoneDuration(duration) + zigbee.command(6, 1, "", [destEndpoint: endpoint])
     }
     else {
@@ -431,7 +431,7 @@ def zoneOn(endpoint, duration) {
 
 def zoneOff(endpoint) {
     log.debug "zoneOff: ${endpoint}"
-    if (getIsSTHub) {
+    if (isSTHub) {
         zigbee.command(6, 0, "", [destEndpoint: endpoint])
     }
     else {
@@ -655,7 +655,7 @@ def refresh() {
 def healthPoll() {
     log.debug "healthPoll()"
     def cmds = refresh()
-    if (getIsSTHub) cmds.each { sendHubCommand(physicalgraph.device.HubAction.newInstance(it)) }
+    if (isSTHub) cmds.each { sendHubCommand(physicalgraph.device.HubAction.newInstance(it)) }
     else            cmds.each { sendHubCommand(hubitat.device.HubAction.newInstance(it)) }
 }
 

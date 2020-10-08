@@ -34,7 +34,7 @@
         command "off"
         command "setLevel"
     }
-    if (getIsST) {
+    if (isST) {
         tiles {
             standardTile("switch", "device.switch", width: 2, height: 2) {
                 state "off", label: "off", action: "on"
@@ -64,8 +64,8 @@ private initialize() {
     sendEvent(name: "switch", value: "off", descriptionText: "initialize off", displayed: false)
     sendEvent(name: "DeviceWatch-DeviceStatus", value: "online")
     sendEvent(name: "healthStatus", value: "online")
-    if (getIsSTHub) sendEvent(name: "DeviceWatch-Enroll", value: [protocol: "cloud", scheme:"untracked"].encodeAsJson(), displayed: false)
-    else            sendEvent(name: "DeviceWatch-Enroll", value: new groovy.json.JsonOutput().toJson([protocol: "cloud", scheme:"untracked"]), display: false, displayed: false)
+    if (isSTHub) sendEvent(name: "DeviceWatch-Enroll", value: [protocol: "cloud", scheme:"untracked"].encodeAsJson(), displayed: false)
+    else         sendEvent(name: "DeviceWatch-Enroll", value: new groovy.json.JsonOutput().toJson([protocol: "cloud", scheme:"untracked"]), display: false, displayed: false)
 }
 
 def parse(String onoff) {
