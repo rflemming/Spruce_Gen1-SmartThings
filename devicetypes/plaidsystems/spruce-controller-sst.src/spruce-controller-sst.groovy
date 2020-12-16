@@ -656,7 +656,7 @@ def healthPoll() {
     log.debug "healthPoll()"
     def cmds = refresh()
     if (isSTHub) cmds.each { sendHubCommand(physicalgraph.device.HubAction.newInstance(it)) }
-    else            cmds.each { sendHubCommand(hubitat.device.HubAction.newInstance(it)) }
+    else         cmds.each { sendHubCommand(hubitat.device.HubAction.newInstance(it, hubitat.device.Protocol.ZIGBEE)) }
 }
 
 def configureHealthCheck() {
